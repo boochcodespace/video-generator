@@ -87,7 +87,15 @@ videoInput.addEventListener('change', () => {
 });
 
 function updateDropLabel(name) {
-  dropLabel.innerHTML = `<span class="drop-icon">🎬</span><span><strong>${name}</strong></span><span class="hint">Click to change</span>`;
+  dropLabel.innerHTML = `
+    <svg class="drop-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/>
+      <line x1="9" y1="15" x2="15" y2="15"/>
+    </svg>
+    <span class="drop-text"><strong>${name}</strong></span>
+    <span class="hint">Click to change</span>`;
 }
 
 // ── SSE stream handler ────────────────────────────────────────────────────────
