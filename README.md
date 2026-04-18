@@ -1,4 +1,4 @@
-# Video Generator
+# VIDEO GENERATOR
 
 A local web app that turns talking-head recordings into animated learning videos. Upload an MP4, describe what you want, and Claude generates a HyperFrames composition — synced to your transcript, branded to your style, ready to render.
 
