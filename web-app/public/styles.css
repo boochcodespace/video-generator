@@ -656,3 +656,264 @@ textarea { resize: vertical; }
 }
 
 .hidden { display: none !important; }
+
+/* ── Tab navigation ──────────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 1140px;
+  margin: 20px auto 0;
+  padding: 0 40px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: var(--size-sm);
+  font-weight: 500;
+  color: var(--text-3);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  letter-spacing: -0.1px;
+}
+.tab-btn:hover { color: var(--text-2); background: var(--surface); }
+.tab-btn.active {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 960px) {
+  .tab-nav { padding: 0 24px; }
+}
+
+/* ── Script flow: shared ─────────────────────────────────────────────────── */
+.sf-main {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+@media (max-width: 960px) {
+  .sf-main { grid-template-columns: 1fr; padding: 24px; }
+}
+
+/* ── Scene review stage ──────────────────────────────────────────────────── */
+.sf-review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 32px 40px 0;
+  gap: 20px;
+}
+
+.sf-review-header .subtitle { margin-bottom: 0; }
+
+.sf-review-title {
+  font-size: var(--size-xl);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.sf-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.sf-scenes-list {
+  max-width: 1140px;
+  margin: 20px auto 0;
+  padding: 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sf-review-footer {
+  max-width: 1140px;
+  margin: 16px auto 48px;
+  padding: 0 40px;
+}
+
+/* ── Scene card ──────────────────────────────────────────────────────────── */
+.scene-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.12s;
+}
+.scene-card:hover { border-color: var(--border-hover); }
+
+.scene-card-header {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scene-num {
+  font-family: var(--mono);
+  font-size: var(--size-xs);
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.scene-headline {
+  font-size: var(--size-sm);
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  border: none;
+  font-family: var(--font);
+  width: 100%;
+  outline: none;
+  padding: 0;
+}
+.scene-headline:focus { color: var(--text); }
+.scene-headline::placeholder { color: var(--text-3); }
+
+.scene-duration {
+  font-family: var(--mono);
+  font-size: var(--size-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.scene-remove {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.1s, background 0.1s;
+}
+.scene-remove:hover { color: var(--err); background: var(--err-bg); }
+
+.scene-card-body {
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 16px;
+}
+
+.scene-card-body.hidden { display: none; }
+
+.scene-script-label {
+  font-size: var(--size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.scene-script-text {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: var(--size-sm);
+  color: var(--text);
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.scene-script-text:focus { border-color: var(--border-focus); background: var(--panel); }
+
+.scene-image-section { display: flex; flex-direction: column; }
+
+.scene-image-zone {
+  position: relative;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color 0.12s;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 100px;
+}
+.scene-image-zone:hover { border-color: var(--text); }
+.scene-image-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.scene-image-zone .hint { font-size: 11px; }
+
+.scene-image-preview {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  max-height: 120px;
+  display: none;
+  border: 1px solid var(--border);
+}
+.scene-image-preview.visible { display: block; }
+
+/* ── Building stage — TTS grid ───────────────────────────────────────────── */
+.sf-tts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tts-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: var(--size-xs);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tts-cell.done { color: var(--ok); border-color: var(--ok-border); background: var(--ok-bg); }
+.tts-cell.active { color: var(--text-2); border-color: var(--border-hover); }
+.tts-cell .tts-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--border-hover); flex-shrink: 0;
+}
+.tts-cell.done .tts-dot { background: var(--ok); }
+.tts-cell.active .tts-dot { background: #F59E0B; animation: pulse 1.2s ease-in-out infinite; }
+
+@media (max-width: 960px) {
+  .sf-review-header { padding: 24px 24px 0; flex-direction: column; }
+  .sf-scenes-list { padding: 0 24px; }
+  .sf-review-footer { padding: 0 24px; }
+  .scene-card-body { grid-template-columns: 1fr; }
+}

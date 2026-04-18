@@ -25,6 +25,14 @@
     </div>
   </header>
 
+  <!-- ── Tab navigation ─────────────────────────────────────────────────── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="video">From video</button>
+    <button class="tab-btn" data-tab="script">From script</button>
+  </nav>
+
+  <!-- ── Flow: From video ───────────────────────────────────────────────── -->
+  <div id="flow-video">
   <main>
 
     <!-- ── Left: Form ──────────────────────────────────────────────────── -->
@@ -186,7 +194,170 @@
       <span class="hint">Loading…</span>
     </div>
   </section>
+  </div><!-- /flow-video -->
+
+  <!-- ── Flow: From script ──────────────────────────────────────────────── -->
+  <div id="flow-script" class="hidden">
+
+    <!-- Stage 1: Input -->
+    <div id="sf-input">
+      <main class="sf-main">
+
+        <section class="panel form-panel">
+          <h2>Script to video</h2>
+          <p class="subtitle">
+            Paste your training script. Claude will break it into scenes,
+            generate a voiceover, and build an animated HyperFrames video.
+          </p>
+
+          <div class="field">
+            <label for="sf-title">Title <span class="required">required</span></label>
+            <input type="text" id="sf-title" placeholder="e.g. Introduction to AI Automation" />
+          </div>
+
+          <div class="field">
+            <label for="sf-script">Script <span class="required">required</span></label>
+            <textarea id="sf-script" rows="10"
+              placeholder="Paste your full training script here. Write it the way you'd actually say it — complete sentences, natural flow."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="sf-style">Visual style</label>
+            <select id="sf-style">
+              <option value="educational">Educational</option>
+              <option value="corporate">Corporate</option>
+              <option value="energetic">Energetic</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="sf-voice">Voiceover voice</label>
+            <select id="sf-voice">
+              <option value="am_adam">Adam (male)</option>
+              <option value="af_sky">Sky (female)</option>
+            </select>
+          </div>
+
+          <div id="sf-api-warning" class="warning hidden">
+            <strong>ANTHROPIC_API_KEY not set.</strong>
+            Add it to your <code>.env</code> file and restart the server.
+          </div>
+
+          <button id="sf-parse-btn" class="btn-primary">
+            <span id="sf-parse-label">Parse into scenes</span>
+          </button>
+        </section>
+
+        <section class="panel result-panel">
+          <div class="idle-state">
+            <div class="idle-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <p>Scene breakdown will appear here.</p>
+            <p class="hint">Paste your script and click <strong>Parse into scenes</strong>.</p>
+          </div>
+        </section>
+
+      </main>
+    </div><!-- /sf-input -->
+
+    <!-- Stage 2: Review scenes -->
+    <div id="sf-review" class="hidden">
+      <div class="sf-review-header">
+        <div>
+          <h2 class="sf-review-title" id="sf-review-title">Scene breakdown</h2>
+          <p class="subtitle" id="sf-review-meta"></p>
+        </div>
+        <div class="sf-review-actions">
+          <button id="sf-back-btn" class="btn-secondary">← Back</button>
+          <button id="sf-generate-btn" class="btn-primary" style="width:auto;margin-top:0;">Generate video</button>
+        </div>
+      </div>
+
+      <div id="sf-scenes-list" class="sf-scenes-list"></div>
+
+      <div class="sf-review-footer">
+        <button id="sf-add-scene-btn" class="btn-secondary">+ Add scene</button>
+      </div>
+    </div><!-- /sf-review -->
+
+    <!-- Stage 3: Building -->
+    <div id="sf-building" class="hidden">
+      <main class="sf-main">
+        <section class="panel" style="grid-column:1/-1">
+          <div class="progress-header">
+            <span class="spinner"></span>
+            <h3 id="sf-progress-title">Building your video…</h3>
+          </div>
+
+          <!-- TTS per-scene progress -->
+          <div id="sf-tts-progress" class="sf-tts-grid hidden"></div>
+
+          <div id="sf-progress-log" class="progress-log" style="margin-top:16px;"></div>
+
+          <div class="html-progress hidden" id="sf-html-progress-wrap">
+            <div class="html-bar-label">Generating composition…</div>
+            <div class="html-bar-track">
+              <div id="sf-html-bar" class="html-bar" style="width:0%"></div>
+            </div>
+            <span id="sf-html-chars">0</span> chars written
+          </div>
+        </section>
+      </main>
+    </div><!-- /sf-building -->
+
+    <!-- Stage 4: Complete -->
+    <div id="sf-complete" class="hidden">
+      <main class="sf-main">
+        <section class="panel" style="grid-column:1/-1">
+          <div class="complete-icon">✓</div>
+          <h3>Video ready</h3>
+          <p id="sf-complete-project-id" class="project-id-label"></p>
+
+          <div class="action-row">
+            <button id="sf-preview-btn" class="btn-secondary">Open in Studio</button>
+            <button id="sf-render-btn" class="btn-primary" style="width:auto;margin-top:0;">Render draft</button>
+          </div>
+
+          <div id="sf-render-progress" class="hidden" style="display:flex;align-items:center;gap:8px;font-size:var(--size-xs);color:var(--text-2);margin-bottom:12px;">
+            <span class="spinner"></span>
+            <span id="sf-render-status">Rendering…</span>
+          </div>
+
+          <div id="sf-download-row" class="hidden action-row">
+            <a id="sf-download-link" class="btn-download" download>Download MP4</a>
+          </div>
+
+          <div class="terminal-hint">
+            <p>Run in terminal</p>
+            <pre id="sf-preview-cmd"></pre>
+          </div>
+        </section>
+      </main>
+    </div><!-- /sf-complete -->
+
+    <!-- Stage: Error -->
+    <div id="sf-error" class="hidden">
+      <main class="sf-main">
+        <section class="panel" style="grid-column:1/-1">
+          <div class="error-icon">✕</div>
+          <h3>Something went wrong</h3>
+          <p id="sf-error-message" class="error-message"></p>
+          <button id="sf-retry-btn" class="btn-secondary">Try again</button>
+        </section>
+      </main>
+    </div><!-- /sf-error -->
+
+  </div><!-- /flow-script -->
 
   <script src="app.js"></script>
+  <script src="script-flow.js"></script>
 </body>
 </html>
