@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "preflight": "node scripts/preflight.mjs",
-    "preflight:all": "for d in video-projects/*/; do node scripts/preflight.mjs \"$d\" || true; done"
+    "preflight:all": "for d in video-projects/*/; do node scripts/preflight.mjs \"$d\" || true; done",
+    "web": "cd web-app && npm start",
+    "web:install": "cd web-app && npm install"
   },
   "keywords": [],
   "author": "",

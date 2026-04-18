@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Generator — Learning &amp; Design</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span class="logo-mark">▶</span>
+      <span class="logo-text">Video Generator</span>
+    </div>
+    <div id="status-bar" class="status-bar hidden">
+      <span id="status-indicator" class="indicator"></span>
+      <span id="status-text">Ready</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Form -->
+    <section class="panel form-panel" id="form-section">
+      <h2>Create a Learning Video</h2>
+      <p class="subtitle">Upload a talking-head recording and describe what you want. Claude will generate an animated HyperFrames composition for you.</p>
+
+      <form id="generate-form" enctype="multipart/form-data">
+        <!-- Video Upload -->
+        <div class="field">
+          <label for="video-input">Video File <span class="required">*</span></label>
+          <div id="drop-zone" class="drop-zone">
+            <input type="file" id="video-input" name="video" accept="video/*" required />
+            <div class="drop-label" id="drop-label">
+              <span class="drop-icon">🎬</span>
+              <span>Drop your MP4 here or <u>click to browse</u></span>
+              <span class="hint">MP4 recommended · up to 2 GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div class="field">
+          <label for="title-input">Lesson / Video Title <span class="required">*</span></label>
+          <input type="text" id="title-input" name="title" placeholder="e.g. Introduction to AI Automation" required />
+        </div>
+
+        <!-- Style -->
+        <div class="field">
+          <label for="style-select">Style</label>
+          <select id="style-select" name="style">
+            <option value="educational">Educational — dark theme, corner PiP, text overlays</option>
+            <option value="corporate">Corporate — clean, professional, section cards</option>
+            <option value="energetic">Energetic — bold type, fast cuts, accent callouts</option>
+          </select>
+        </div>
+
+        <!-- Description -->
+        <div class="field">
+          <label for="desc-input">Additional Instructions <span class="optional">(optional)</span></label>
+          <textarea id="desc-input" name="description" rows="3"
+            placeholder="e.g. Emphasise the 60/30/10 split in section 2. Add a callout for each percentage. Keep it professional."></textarea>
+        </div>
+
+        <div id="api-warning" class="warning hidden">
+          <strong>⚠ ANTHROPIC_API_KEY not set.</strong> Add it to your <code>.env</code> file and restart the server.
+        </div>
+
+        <button type="submit" id="generate-btn" class="btn-primary">
+          <span id="btn-label">Generate Video</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Right: Progress + Results -->
+    <section class="panel result-panel" id="result-section">
+      <!-- Idle state -->
+      <div id="idle-state" class="idle-state">
+        <div class="idle-icon">✦</div>
+        <p>Your generated video will appear here.</p>
+        <p class="hint">Fill in the form and click <strong>Generate Video</strong>.</p>
+      </div>
+
+      <!-- Progress state -->
+      <div id="progress-state" class="hidden">
+        <div class="progress-header">
+          <span class="spinner"></span>
+          <h3 id="progress-title">Processing…</h3>
+        </div>
+        <div id="progress-log" class="progress-log"></div>
+        <div class="html-progress hidden" id="html-progress-wrap">
+          <div class="html-bar-label">Generating HTML…</div>
+          <div class="html-bar-track">
+            <div id="html-bar" class="html-bar" style="width:0%"></div>
+          </div>
+          <span id="html-chars">0</span> chars
+        </div>
+      </div>
+
+      <!-- Complete state -->
+      <div id="complete-state" class="hidden">
+        <div class="complete-icon">✓</div>
+        <h3>Composition Ready</h3>
+        <p id="complete-project-id" class="project-id-label"></p>
+
+        <div class="action-row">
+          <button id="preview-btn" class="btn-secondary">Preview in Studio</button>
+          <button id="render-draft-btn" class="btn-primary">Render Draft MP4</button>
+        </div>
+
+        <div id="render-progress" class="hidden">
+          <span class="spinner"></span>
+          <span id="render-status">Rendering…</span>
+        </div>
+
+        <div id="download-row" class="hidden action-row">
+          <a id="download-link" class="btn-download" download>⬇ Download MP4</a>
+        </div>
+
+        <div class="terminal-hint">
+          <p>Or run manually from your terminal:</p>
+          <pre id="preview-cmd"></pre>
+        </div>
+      </div>
+
+      <!-- Error state -->
+      <div id="error-state" class="hidden">
+        <div class="error-icon">✕</div>
+        <h3>Something went wrong</h3>
+        <p id="error-message" class="error-message"></p>
+        <button id="retry-btn" class="btn-secondary">Try Again</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Project history -->
+  <section class="history-section">
+    <h3>Past Projects</h3>
+    <div id="projects-list" class="projects-list">
+      <span class="hint">Loading…</span>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
