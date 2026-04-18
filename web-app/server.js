@@ -523,6 +523,305 @@ app.get('/api/projects/:projectId/download/:filename', (req, res) => {
   res.download(filePath);
 });
 
+// ── Script-to-video prompts ───────────────────────────────────────────────────
+
+const SCRIPT_PARSE_PROMPT = `You are a video scriptwriter. The user gives you a plain-text training script. Break it into scenes for a short training video (2–5 min total).
+
+Return ONLY a valid JSON array — no markdown, no explanation:
+[
+  {
+    "id": "s01",
+    "headline": "Short Scene Title (max 6 words)",
+    "script": "Full narration text for this scene.",
+    "words": <word count integer>,
+    "duration": <speaking duration in seconds, float, based on ~130 wpm>
+  }
+]
+
+Rules:
+- 3–12 scenes
+- Each scene = one coherent idea or step
+- Headline: title-case, max 6 words, no punctuation
+- script: complete sentences the narrator will speak
+- duration: words / 130 * 60, rounded to 1 decimal
+- Total duration should be 90–300 seconds`;
+
+const SCRIPT_COMPOSITION_PROMPT = `You are an expert HyperFrames video composition generator for pure text-slide training videos (no camera feed).
+
+## Render Contract (EXACT — violations break renders)
+1. Root <div>: id, data-composition-id, data-start="0", data-width="1920", data-height="1080"
+2. Every timed visible element: class="clip", data-start, data-duration, data-track-index
+3. <video> and <audio> do NOT get class="clip"
+4. Every <audio>: data-start, data-duration, data-track-index, data-volume="1"
+5. Register ONE paused GSAP timeline: window.__timelines["COMP_ID"] = tl
+6. End timeline: tl.set({}, {}, TOTAL_SECONDS)
+7. No Date.now(), no Math.random(), no runtime fetches
+8. data-start may reference a clip id: "s01", "s01 + 0.5"
+
+## Visual style: dark text-slide
+- Background: #07121c (dark navy)
+- Scene number: Roboto Mono 400, 13px, #37bdf8, top-left corner, position absolute
+- Headline: Montserrat 900, 72–96px, #ffffff, centered, with a 3px left border in #37bdf8
+- Body/narration bullet: Montserrat 400, 28px, #aac8db, max 2 lines visible at once
+- Slide image (if present): position right side, max 680×480, object-fit contain, subtle border
+- Each scene: slide-in from bottom (y:40→0, opacity:0→1, 0.5s power2.out), hold, then fade out 0.3s
+
+## Audio: one <audio> tag per scene pointing to assets/sNN.wav (or .mp3)
+  If a scene has no audio file, skip the audio tag.
+
+Output ONLY the complete index.html — no markdown, no explanation.`;
+
+// ── TTS helper ────────────────────────────────────────────────────────────────
+
+async function generateSceneTTS(projectDir, scene, voice = 'am_adam') {
+  const ext_wav = path.join(projectDir, 'assets', `${scene.id}.wav`);
+  const ext_mp3 = path.join(projectDir, 'assets', `${scene.id}.mp3`);
+
+  // Try HyperFrames TTS first (on-device Kokoro)
+  try {
+    await run(
+      `npx hyperframes tts ${JSON.stringify(scene.script)} --voice ${voice} --output "assets/${scene.id}.wav"`,
+      projectDir
+    );
+    if (fs.existsSync(ext_wav)) return `${scene.id}.wav`;
+  } catch (_) {}
+
+  // Fall back to OpenAI TTS
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const OpenAI = require('openai');
+      const oai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const voiceMap = { am_adam: 'onyx', af_sky: 'nova' };
+      const oaiVoice = voiceMap[voice] || 'onyx';
+      const mp3Resp = await oai.audio.speech.create({
+        model: 'tts-1',
+        voice: oaiVoice,
+        input: scene.script,
+      });
+      const buf = Buffer.from(await mp3Resp.arrayBuffer());
+      fs.writeFileSync(ext_mp3, buf);
+      return `${scene.id}.mp3`;
+    } catch (_) {}
+  }
+
+  return null;
+}
+
+// ── Script composition generator ──────────────────────────────────────────────
+
+async function generateScriptComposition(jobId, { title, scenes, style, totalSecs }) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const compId = slugify(title) || 'script-lesson';
+
+  // Build scene timing table for Claude
+  let cumulativeSecs = 0;
+  const timingLines = scenes.map((s) => {
+    const start = cumulativeSecs.toFixed(1);
+    cumulativeSecs += s.duration;
+    const end = cumulativeSecs.toFixed(1);
+    return `  ${s.id} | start:${start}s | duration:${s.duration}s | end:${end}s | headline:"${s.headline}" | audio:${s.audioFile || 'none'} | slide:${s.slideFile || 'none'}`;
+  });
+
+  const userMessage = `Generate a complete HyperFrames index.html for this script-based training video:
+
+Title: ${title}
+Composition ID: ${compId}
+Total duration: ${totalSecs}s
+Style: ${style || 'educational'}
+
+Scene timing (EXACT — use these starts/durations):
+${timingLines.join('\n')}
+
+Requirements:
+- No camera/video element (pure text slides)
+- Include an <audio> element for each scene that has an audio file (not "none")
+- Audio track-index: 4; text clips track-index: 1; scene number clips track-index: 2
+- For scenes with a slide image (not "none"), show it on the right half of the screen
+- Title card: first 2s, full screen, large title
+- Outro: last 2s, fade to dark + "Thank you" or similar
+- window.__timelines["${compId}"] = tl
+- tl.set({}, {}, ${totalSecs})
+
+Output ONLY the complete index.html.`;
+
+  emitEvent(jobId, 'status', 'Generating composition with Claude...');
+
+  let html = '';
+  const stream = await client.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 10000,
+    system: [{ type: 'text', text: SCRIPT_COMPOSITION_PROMPT, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+      html += chunk.delta.text;
+      emitEvent(jobId, 'html_progress', { chars: html.length });
+    }
+  }
+
+  html = html.replace(/^```html\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  return html;
+}
+
+// ── Script pipeline ───────────────────────────────────────────────────────────
+
+async function runScriptPipeline(jobId, { title, style, voice, scenes, slideFiles }) {
+  try {
+    const slug = slugify(title) || `script-${jobId.slice(0, 8)}`;
+    const projectDir = path.join(VIDEO_PROJECTS_DIR, slug);
+    fs.mkdirSync(path.join(projectDir, 'assets'), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, 'compositions'), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, 'renders'), { recursive: true });
+
+    emitEvent(jobId, 'status', 'Setting up project...');
+
+    // Copy brand assets
+    copyBrandAssets(path.join(projectDir, 'assets'));
+
+    // Write meta.json + hyperframes.json
+    const now = new Date().toISOString();
+    fs.writeFileSync(
+      path.join(projectDir, 'meta.json'),
+      JSON.stringify({ id: slug, name: title, createdAt: now, width: 1920, height: 1080, fps: 30, type: 'script' }, null, 2)
+    );
+    fs.writeFileSync(
+      path.join(projectDir, 'hyperframes.json'),
+      JSON.stringify({
+        $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
+        registry: 'https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry',
+        paths: { blocks: 'compositions', components: 'compositions/components', assets: 'assets' },
+      }, null, 2)
+    );
+
+    // Move slide images into assets/
+    for (const s of scenes) {
+      if (slideFiles && slideFiles[s.id]) {
+        const sf = slideFiles[s.id];
+        const slideExt = path.extname(sf.originalname) || '.png';
+        const slideDest = path.join(projectDir, 'assets', `${s.id}-slide${slideExt}`);
+        fs.copyFileSync(sf.path, slideDest);
+        try { fs.unlinkSync(sf.path); } catch (_) {}
+        s.slideFile = `${s.id}-slide${slideExt}`;
+      }
+    }
+
+    // Generate TTS per scene
+    for (let i = 0; i < scenes.length; i++) {
+      const s = scenes[i];
+      emitEvent(jobId, 'status', `Generating voiceover for scene ${i + 1} of ${scenes.length}...`);
+      emitEvent(jobId, 'tts_progress', { sceneId: s.id, index: i, total: scenes.length });
+      const audioFile = await generateSceneTTS(projectDir, s, voice || 'am_adam');
+      s.audioFile = audioFile || null;
+    }
+
+    // Probe actual TTS durations and update scene durations
+    emitEvent(jobId, 'status', 'Measuring audio durations...');
+    for (const s of scenes) {
+      if (s.audioFile) {
+        try {
+          const dur = await run(
+            `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "assets/${s.audioFile}"`,
+            projectDir
+          );
+          const actualDur = parseFloat(dur);
+          if (actualDur > 0) s.duration = Math.ceil(actualDur * 10) / 10 + 0.5; // add 0.5s breathing room
+        } catch (_) {}
+      }
+    }
+
+    // Compute total duration
+    const totalSecs = scenes.reduce((acc, s) => acc + s.duration, 0) + 2; // +2 for title card
+
+    // Generate composition with Claude
+    const html = await generateScriptComposition(jobId, { title, scenes, style, totalSecs: Math.ceil(totalSecs) });
+
+    const indexPath = path.join(projectDir, 'index.html');
+    fs.writeFileSync(indexPath, html, 'utf8');
+    emitEvent(jobId, 'log', 'index.html written.');
+
+    // Lint
+    emitEvent(jobId, 'status', 'Running lint...');
+    try {
+      const lintOut = await run('npx hyperframes lint', projectDir);
+      emitEvent(jobId, 'log', lintOut || 'Lint passed.');
+    } catch (e) {
+      emitEvent(jobId, 'log', `Lint warnings: ${e.message}`);
+    }
+
+    emitEvent(jobId, 'complete', {
+      projectId: slug,
+      projectDir: path.relative(WORKSPACE_ROOT, projectDir),
+      previewCmd: `cd video-projects/${slug} && npx hyperframes preview`,
+    });
+    jobs.get(jobId).done = true;
+  } catch (err) {
+    emitEvent(jobId, 'error', err.message);
+    jobs.get(jobId).done = true;
+  }
+}
+
+// ── Script routes ─────────────────────────────────────────────────────────────
+
+// Parse script into scenes
+app.post('/api/script/parse', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(400).json({ error: 'ANTHROPIC_API_KEY not set' });
+  }
+  const { script } = req.body;
+  if (!script || !script.trim()) {
+    return res.status(400).json({ error: 'script is required' });
+  }
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      system: [{ type: 'text', text: SCRIPT_PARSE_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: `Parse this training script into scenes:\n\n${script}` }],
+    });
+    let raw = msg.content[0].text.trim();
+    raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/, '').trim();
+    const scenes = JSON.parse(raw);
+    res.json({ scenes });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Start script generation pipeline
+app.post('/api/script/generate', upload.any(), (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(400).json({ error: 'ANTHROPIC_API_KEY not set' });
+  }
+
+  let scenes;
+  try {
+    scenes = JSON.parse(req.body.scenes);
+  } catch (_) {
+    return res.status(400).json({ error: 'Invalid scenes JSON' });
+  }
+
+  const { title = 'Untitled', style = 'educational', voice = 'am_adam' } = req.body;
+
+  // Map uploaded slide files by scene id (field name: slide_<sceneId>)
+  const slideFiles = {};
+  if (req.files) {
+    req.files.forEach((f) => {
+      const m = f.fieldname.match(/^slide_(.+)$/);
+      if (m) slideFiles[m[1]] = f;
+    });
+  }
+
+  const jobId = randomUUID();
+  jobs.set(jobId, { events: [], clients: [], done: false });
+
+  runScriptPipeline(jobId, { title, style, voice, scenes, slideFiles });
+
+  res.json({ jobId });
+});
+
 // ── Start server ──────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
