@@ -1,4 +1,4 @@
-# Hyperframes Editor — Student Edition
+# VIDEO GENERATOR
 
 A workbench for building motion-graphics video pipelines in **plain HTML + GSAP**, powered by [Hyperframes](https://hyperframes.heygen.com). Twelve finished video projects you can clone, scrub through, rip apart, and rebuild as your own.
 
