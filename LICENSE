@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Nate Herk
+Copyright (c) 2026 The Urban Tutor
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +24,7 @@ SOFTWARE.
 
 Note on brand assets:
 
-The AI Automation Society (AIS) brand materials included in this repository
-(logo, brand guideline image, brand tokens CSS, and the content of several
-example projects) are shown as a worked example of a real brand system. They
-remain the property of AI Automation Society and are not licensed for reuse
-in your own projects. To use this repo, replace the AIS assets with your own
-brand materials as described in the README.
+The Urban Tutor brand materials included in this repository (logo, background,
+brand tokens CSS, and example projects) are proprietary to The Urban Tutor.
+When using this repository, replace these assets with your own brand materials
+as described in the README to ensure proper branding for your content.
