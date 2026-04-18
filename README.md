@@ -171,9 +171,3 @@ The `.claude/skills/` folder ships slash commands that encode framework-specific
 | `/short-form-video` | 9:16 vertical talking-head videos |
 
 ---
-
-## License
-
-Code — MIT. AIS brand assets (logo, background, brand tokens) remain the property of AI Automation Society and are included as a worked example only — replace them before shipping anything externally.
-
-HyperFrames framework © HeyGen — docs at [hyperframes.heygen.com](https://hyperframes.heygen.com).
